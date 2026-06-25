@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>태권도 겨루기 스코어보드 (2선승제 & 12점차승)</title>
+    <style>
+        :root {
+            --red-color: #ff3b30;
+            --blue-color: #007aff;
+            --dark-bg: #1c1c1e;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--dark-bg);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* 라운드, 타이머, 세트 스코어 영역 */
+        .match-info {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #2c2c2e;
+            padding: 15px 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .round {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #aeaeb2;
+            margin-bottom: 5px;
+        }
+
+        .timer {
+            font-size: 3.5rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #34c759;
+            margin-bottom: 5px;
+        }
+
+        /* 시간 설정 세팅 스타일 */
+        .time-setting {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .time-setting label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 라운드 승리 스택 (2선승제 표시) */
+        .round-wins {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 5px;
+            border-top: 1px solid #48484a;
+            padding-top: 10px;
+        }
+
+        .win-indicator {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .win-count {
+            font-size: 1.3rem;
+            color: #ffcc00;
+        }
+
+        /* 홍/청 스코어보드 레이아웃 */
+        .scoreboard {
+            display: flex;
+            width: 100%;
+            max-width: 1000px;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .fighter-card {
+            flex: 1;
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .fighter-card.hong {
+            background: linear-gradient(145deg, #8b0000, var(--red-color));
+        }
+
+        .fighter-card.chung {
+            background: linear-gradient(145deg, #00008b, var(--blue-color));
+        }
+
+        .fighter-name {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .score {
+            font-size: 6rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.6);
+        }
+
+        .gam-jeom {
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        /* 스코어 입력 버튼 설정 */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 12px 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.03);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        /* 특수 기능 버튼 디자인 */
+        .btn-cancel {
+            grid-column: span 2;
+            background: rgba(0, 0, 0, 0.3);
+            color: #ffb3b3;
+        }
+
+        .btn-gamjeom {
+            grid-column: span 2;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ff9500;
+            border-color: #ff9500;
+            margin-top: 5px;
+        }
+        
+        .btn-gamjeom:hover {
+            background: #ff9500;
+            color: black;
+        }
+
+        /* 시스템 제어판 */
+        .system-controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-control {
+            background: #3a3a3c;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+
+        .btn-control.start { background: #34c759; }
+        .btn-control.pause { background: #ffcc00; color: black; }
+        .btn-control.reset { background: #ff3b30; }
+    </style>
+</head>
+<body>
+
+    <h1>TAEKWONDO MATCH SYSTEM</h1>
+
+    <div class="match-info">
+        <div id="round-display" class="round">ROUND 1</div>
+        <div id="timer-display" class="timer">01:30</div>
+        
+        <!-- 경기 시간 선택 라디오 버튼 -->
+        <div class="time-setting">
+            <label><input type="radio" name="match-time" value="60" onchange="changeDefaultTime(60)"> 1분</label>
+            <label><input type="radio" name="match-time" value="90" checked onchange="changeDefaultTime(90)"> 1분 30초</label>
+        </div>
+
+        <div class="round-wins">
+            <div class="win-indicator">홍 승리: <span id="hong-wins" class="win-count">0</span></div>
+            <div class="win-indicator">청 승리: <span id="chung-wins" class="win-count">0</span></div>
+        </div>
+    </div>
+
+    <div class="scoreboard">
+        <div class="fighter-card hong">
+            <div class="fighter-name">홍 (RED)</div>
+            <div id="hong-score" class="score">0</div>
+            <div id="hong-gamjeom" class="gam-jeom">감점: 0</div>
+            
+            <div class="btn-group">
+                <button onclick="updateScore('hong', 1)">주먹 (+1)</button>
+                <button onclick="updateScore('hong', 2)">몸통 발 (+2)</button>
+                <button onclick="updateScore('hong', 3)">머리 발 (+3)</button>
+                <button onclick="updateScore('hong', 4)">회전 몸통 (+4)</button>
+                <button onclick="updateScore('hong', 6)">회전 머리 (+6)</button>
+                <button class="btn-cancel" onclick="updateScore('hong', -1)">점수 차감 (-1)</button>
+                <button class="btn-gamjeom" onclick="addGamjeom('hong')">감점 부여 (+1)</button>
+            </div>
+        </div>
+
+        <div class="fighter-card chung">
+            <div class="fighter-name">청 (BLUE)</div>
+            <div id="chung-score" class="score">0</div>
+            <div id="chung-gamjeom" class="gam-jeom">감점: 0</div>
+            
+            <div class="btn-group">
+                <button onclick="updateScore('chung', 1)">주먹 (+1)</button>
+                <button onclick="updateScore('chung', 2)">몸통 발 (+2)</button>
+                <button onclick="updateScore('chung', 3)">머리 발 (+3)</button>
+                <button onclick="updateScore('chung', 4)">회전 몸통 (+4)</button>
+                <button onclick="updateScore('chung', 6)">회전 머리 (+6)</button>
+                <button class="btn-cancel" onclick="updateScore('chung', -1)">점수 차감 (-1)</button>
+                <button class="btn-gamjeom" onclick="addGamjeom('chung')">감점 부여 (+1)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="system-controls">
+        <button class="btn-control start" onclick="startTimer()">경기 시작</button>
+        <button class="btn-control pause" onclick="pauseTimer()">일시 정지</button>
+        <button class="btn-control" onclick="nextRound()">다음 라운드</button>
+        <button class="btn-control reset" onclick="resetMatch()">매치 리셋</button>
+    </div>
+
+    <script>
+        // 경기 상태 변수
+        let scores = { hong: 0, chung: 0 };
+        let gamjeoms = { hong: 0, chung: 0 };
+        let roundWins = { hong: 0, chung: 0 };
+        let round = 1;
+        let isRoundOver = false; 
+        
+        let defaultSeconds = 90; // 기본 설정 시간 저장용
+        let totalSeconds = 90;   // 현재 라운드의 남은 시간
+        let timerInterval = null;
+        let isRunning = false; // 타이머가 현재 가동 중인지 여부
+
+        // 경기 시간 변경 함수
+        function changeDefaultTime(seconds) {
+            if (isRunning) {
+                alert("경기가 진행 중일 때는 시간을 변경할 수 없습니다. 일시 정지 후 리셋하거나 다음 라운드에서 변경해주세요.");
+                document.querySelector(`input[name="match-time"][value="${defaultSeconds}"]`).checked = true;
+                return;
+            }
+            defaultSeconds = seconds;
+            totalSeconds = seconds;
+            updateTimerDisplay();
+        }
+
+        // 점수 변경 및 12점 차 조건 체크 함수
+        function updateScore(fighter, points) {
+            if (!isRunning || isRoundOver) {
+                alert("경기를 먼저 시작(경기 시작 버튼 클릭)해 주세요!");
+                return;
+            }
+
+            scores[fighter] += points;
+            if (scores[fighter] < 0) scores[fighter] = 0; 
+            document.getElementById(`${fighter}-score`).innerText = scores[fighter];
+
+            checkPointGap();
+        }
+
+        // 감점 처리 함수
+        function addGamjeom(fighter) {
+            if (!isRunning || isRoundOver) {
+                alert("경기를 먼저 시작해 주세요!");
+                return;
+            }
+
+            gamjeoms[fighter]++;
+            document.getElementById(`${fighter}-gamjeom`).innerText = `감점: ${gamjeoms[fighter]}`;
+            
+            const opponent = (fighter === 'hong') ? 'chung' : 'hong';
+            scores[opponent] += 1;
+            document.getElementById(`${opponent}-score`).innerText = scores[opponent];
+
+            checkPointGap();
+
+            if (gamjeoms[fighter] >= 5) {
+                pauseTimer();
+                isRoundOver = true;
+                alert(`${fighter === 'hong' ? '홍(RED)' : '청(BLUE)'} 선수의 감점 5회 누적으로 해당 라운드 패배!`);
+                endRound(opponent, "감점 반칙승");
+            }
+        }
+
+        // 12점 차 점수차승 체크 로직
+        function checkPointGap() {
+            const gap = scores.hong - scores.chung;
+            
+            if (gap >= 12) {
+                pauseTimer();
+                isRoundOver = true;
+                alert("★ 홍 점수차승 ★\n12점 이상 점수 차가 벌어져 홍 선수가 이번 라운드를 가져갑니다!");
+                endRound('hong', '점수차승');
+            } else if (gap <= -12) {
+                pauseTimer();
+                isRoundOver = true;
+                alert("★ 청 점수차승 ★\n12점 이상 점수 차가 벌어져 청 선수가 이번 라운드를 가져갑니다!");
+                endRound('chung', '점수차승');
+            }
+        }
+
+        // 라운드 종료 처리
+        function endRound(winner, reason) {
+            roundWins[winner]++;
+            document.getElementById(`${winner}-wins`).innerText = roundWins[winner];
+            
+            if (roundWins.hong === 2) {
+                setTimeout(() => alert("🎉 [최종 결과] 홍(RED) 선수가 2승을 선점하여 최종 승리하였습니다! 🎉"), 100);
+                pauseTimer();
+            } else if (roundWins.chung === 2) {
+                setTimeout(() => alert("🎉 [최종 결과] 청(BLUE) 선수가 2승을 선점하여 최종 승리하였습니다! 🎉"), 100);
+                pauseTimer();
+            } else {
+                if (reason === '점수차승' || reason === '우세승') {
+                    alert("하단의 '다음 라운드' 버튼을 눌러 다음 세트를 진행하세요.");
+                }
+            }
+        }
+
+        function updateTimerDisplay() {
+            let minutes = Math.floor(totalSeconds / 60);
+            let seconds = totalSeconds % 60;
+            
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            
+            document.getElementById('timer-display').innerText = `${minutes}:${seconds}`;
+        }
+
+        // 타이머 시작 및 종료 로직 수정
+        function startTimer() {
+            if (isRunning || isRoundOver) return;
+            if (roundWins.hong === 2 || roundWins.chung === 2) {
+                alert("경기가 최종 종료되었습니다. 새 매치를 원하시면 '매치 리셋'을 누르세요.");
+                return;
+            }
+            isRunning = true;
+            timerInterval = setInterval(() => {
+                if (totalSeconds > 0) {
+                    totalSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    isRoundOver = true;
+                    
+                    if (scores.hong > scores.chung) {
+                        alert(`ROUND ${round} 시간 종료! 홍(RED) 선수 라운드 승리!`);
+                        endRound('hong', '시간종료 승리');
+                    } else if (scores.chung > scores.hong) {
+                        alert(`ROUND ${round} 시간 종료! 청(BLUE) 선수 라운드 승리!`);
+                        endRound('chung', '시간종료 승리');
+                    } else {
+                        // 0:0 동점이거나 일반 동점일 때 심판이 선택할 수 있는 우세 판정 로직 추가
+                        let choice = "";
+                        while (choice !== "1" && choice !== "2") {
+                            choice = prompt(`ROUND ${round} 시간 종료! 동점 상황입니다.\n우세승 판정 결과를 선택해주세요.\n\n1: 홍(RED) 승리\n2: 청(BLUE) 승리`);
+                            
+                            // 취소를 누르거나 입력이 없을 경우를 처리하기 위한 예외 방지 코드
+                            if (choice === null) {
+                                alert("판정을 취소할 수 없습니다. 승자를 반드시 골라주세요.");
+                                choice = "";
+                            }
+                        }
+                        
+                        if (choice === "1") {
+                            alert(`우세 판정 결과: 홍(RED) 선수 ROUND ${round} 승리!`);
+                            endRound('hong', '우세승');
+                        } else if (choice === "2") {
+                            alert(`우세 판정 결과: 청(BLUE) 선수 ROUND ${round} 승리!`);
+                            endRound('chung', '우세승');
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+        }
+
+        function nextRound() {
+            if (roundWins.hong === 2 || roundWins.chung === 2) {
+                alert("경기가 이미 최종 종료되었습니다. 새로 시작하려면 '매치 리셋'을 누르세요.");
+                return;
+            }
+            if (!isRoundOver && (scores.hong > 0 || scores.chung > 0)) {
+                if(!confirm("아직 라운드가 끝나지 않았습니다. 다음 라운드로 강제 진행할까요?")) return;
+            }
+
+            pauseTimer();
+            round++;
+            totalSeconds = defaultSeconds; 
+            isRoundOver = false;
+
+            scores = { hong: 0, chung: 0 };
+            gamjeoms = { hong: 0, chung: 0 };
+
+            document.getElementById('hong-score').innerText = '0';
+            document.getElementById('chung-score').innerText = '0';
+            document.getElementById('hong-gamjeom').innerText = '감점: 0';
+            document.getElementById('chung-gamjeom').innerText = '감점: 0';
+            
+            document.getElementById('round-display').innerText = `ROUND ${round}`;
+            updateTimerDisplay();
+        }
+
+        function resetMatch() {
+            pauseTimer();
+            scores = { hong: 0, chung: 0 };
+            gamjeoms = { hong: 0, chung: 0 };
+            roundWins = { hong: 0, chung: 0 };
+            round = 1;
+            totalSeconds = defaultSeconds; 
+            isRoundOver = false;
+
+            document.getElementById('hong-score').innerText = '0';
+            document.getElementById('chung-score').innerText = '0';
+            document.getElementById('hong-gamjeom').innerText = '감점: 0';
+            document.getElementById('chung-gamjeom').innerText = '감점: 0';
+            document.getElementById('hong-wins').innerText = '0';
+            document.getElementById('chung-wins').innerText = '0';
+            document.getElementById('round-display').innerText = 'ROUND 1';
+            updateTimerDisplay();
+        }
+
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
