@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>산청고등학교 오늘의 급식</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+
+        body {
+            background-color: transparent; /* 바탕화면 투명화 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .meal-container {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .date-text {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .meal-selector {
+            display: flex;
+            justify-content: space-around;
+            background-color: #eee;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .meal-selector label {
+            flex: 1;
+            padding: 8px 0;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .meal-selector input[type="radio"] {
+            display: none;
+        }
+
+        .meal-selector input[type="radio"]:checked + span {
+            display: block;
+            background-color: #3498db;
+            color: white;
+            border-radius: 6px;
+            padding: 4px 0;
+        }
+
+        .meal-box {
+            background-color: #fafbfc;
+            border: 1px solid #eef2f5;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .meal-list {
+            list-style: none;
+            line-height: 1.8;
+            color: #34495e;
+            font-size: 16px;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="meal-container">
+    <h1 id="school-title">🏫 산청고등학교 급식</h1>
+    <div class="date-text" id="current-date">0000년 00월 00일</div>
+
+    <div class="meal-selector">
+        <label>
+            <input type="radio" name="mealType" value="1" onchange="changeMealType()">
+            <span>조식</span>
+        </label>
+        <label>
+            <input type="radio" name="mealType" value="2" checked onchange="changeMealType()">
+            <span>중식</span>
+        </label>
+        <label>
+            <input type="radio" name="mealType" value="3" onchange="changeMealType()">
+            <span>석식</span>
+        </label>
+    </div>
+
+    <div class="meal-box">
+        <ul class="meal-list" id="meal-content">
+            <li>학교 정보를 불러오는 중입니다...</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const API_KEY = 'c40712c631e5483a9823804739020c72';
+    
+    // 내부적으로 사용할 변수
+    let currentOfficeCode = '';
+    let currentSchoolCode = '';
+
+    window.onload = function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        document.getElementById('current-date').innerText = `${yyyy}년 ${mm}월 ${dd}일`;
+        
+        // 켜지자마자 산청고를 자동으로 시스템에서 검색해 코드를 알아옵니다.
+        initSancheongHighSchool();
+    }
+
+    // 자동으로 산청고 코드를 찾아서 세팅하는 함수
+    async function initSancheongHighSchool() {
+        const mealContent = document.getElementById('meal-content');
+        const schoolUrl = `https://open.neis.go.kr/hub/schoolInfo?KEY=${API_KEY}&Type=json&pIndex=1&pSize=10&SCHUL_NM=${encodeURIComponent('산청고등학교')}`;
+
+        try {
+            const response = await fetch(schoolUrl);
+            const data = await response.json();
+
+            if (data.schoolInfo) {
+                // 정확한 학교 코드 매핑
+                currentSchoolCode = data.schoolInfo[1].row[0].SD_SCHUL_CODE;
+                currentOfficeCode = data.schoolInfo[1].row[0].ATPT_OFCDC_SC_CODE; 
+                
+                // 코드를 찾았으니 바로 중식(2) 데이터를 불러옵니다.
+                getMealData(currentOfficeCode, currentSchoolCode, '2');
+            } else {
+                mealContent.innerHTML = '<li class="error-msg">나이스 시스템에서 산청고를 찾을 수 없습니다.</li>';
+            }
+        } catch (error) {
+            console.error('School Init Error:', error);
+            mealContent.innerHTML = '<li class="error-msg">학교 코드 조회 중 오류가 발생했습니다.</li>';
+        }
+    }
+
+    // 조/중/석식 변경 시 호출
+    function changeMealType() {
+        if (currentOfficeCode && currentSchoolCode) {
+            const mealTypeCode = document.querySelector('input[name="mealType"]:checked').value;
+            getMealData(currentOfficeCode, currentSchoolCode, mealTypeCode);
+        }
+    }
+
+    // 급식 데이터 가져오기
+    async function getMealData(officeCode, schoolCode, mealTypeCode) {
+        const mealContent = document.getElementById('meal-content');
+        mealContent.innerHTML = '<li>급식 정보를 가져오는 중입니다...</li>';
+        
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}${mm}${dd}`;
+
+        const mealUrl = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${API_KEY}&Type=json&pIndex=1&pSize=10&ATPT_OFCDC_SC_CODE=${officeCode}&SD_SCHUL_CODE=${schoolCode}&MLSV_YMD=${dateStr}&MMEAL_SC_CODE=${mealTypeCode}`;
+
+        try {
+            const response = await fetch(mealUrl);
+            const data = await response.json();
+
+            if (data.mealServiceDietInfo) {
+                let rawDDISH = data.mealServiceDietInfo[1].row[0].DDISH_NM;
+                
+                // 줄바꿈 태그를 줄바꿈 문자로 바꾸고, 괄호와 그 안의 내용(알레르기 번호)을 삭제합니다.
+                let cleanDDISH = rawDDISH.replace(/<br\/>/g, '\n').replace(/\([^)]*\)/g, '').trim();
+                let mealArray = cleanDDISH.split('\n');
+
+                mealContent.innerHTML = mealArray.map(item => `<li>${item.trim()}</li>`).join('');
+            } else {
+                const typeName = mealTypeCode === '1' ? '조식' : mealTypeCode === '2' ? '중식' : '석식';
+                mealContent.innerHTML = `<li>오늘 예정된 ${typeName}이 없거나<br>아직 등록되지 않았습니다. 😴</li>`;
+            }
+        } catch (error) {
+            console.error('Meal Fetch Error:', error);
+            mealContent.innerHTML = '<li class="error-msg">급식 정보를 가져오는 중 오류가 발생했습니다.</li>';
+        }
+    }
+</script>
+
+</body>
+</html>
